@@ -215,6 +215,7 @@ pub(crate) struct Session {
     pub(crate) cwd: PathBuf,
     base_instructions: Option<String>,
     user_instructions: Option<String>,
+    append_system_prompt: Option<String>,
     pub(crate) approval_policy: AskForApproval,
     sandbox_policy: SandboxPolicy,
     shell_environment_policy: ShellEnvironmentPolicy,
@@ -876,6 +877,7 @@ async fn submission_loop(
                     ctrl_c: Arc::clone(&ctrl_c),
                     user_instructions,
                     base_instructions,
+                    append_system_prompt: config.append_system_prompt.clone(),
                     approval_policy,
                     sandbox_policy,
                     shell_environment_policy: config.shell_environment_policy.clone(),
@@ -1278,6 +1280,7 @@ async fn run_turn(
         store: !sess.disable_response_storage,
         tools,
         base_instructions_override: sess.base_instructions.clone(),
+        append_system_prompt: sess.append_system_prompt.clone(),
         environment_context: Some(EnvironmentContext {
             cwd: sess.cwd.clone(),
             approval_policy: sess.approval_policy,
@@ -1514,6 +1517,7 @@ async fn run_compact_task(
         environment_context: None,
         tools: Vec::new(),
         base_instructions_override: Some(compact_instructions.clone()),
+        append_system_prompt: sess.append_system_prompt.clone(),
     };
 
     let max_retries = sess.client.get_provider().stream_max_retries();

@@ -44,6 +44,10 @@ pub struct Cli {
     #[clap(long = "cd", short = 'C', value_name = "DIR")]
     pub cwd: Option<PathBuf>,
 
+    /// Append text to the end of the system prompt/instructions for this run.
+    #[arg(long = "append-system-prompt")]
+    pub append_system_prompt: Option<String>,
+
     /// Allow running Codex outside a Git repository.
     #[arg(long = "skip-git-repo-check", default_value_t = false)]
     pub skip_git_repo_check: bool,

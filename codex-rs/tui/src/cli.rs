@@ -54,6 +54,10 @@ pub struct Cli {
     #[clap(long = "cd", short = 'C', value_name = "DIR")]
     pub cwd: Option<PathBuf>,
 
+    /// Append text to the end of the system prompt/instructions for this run.
+    #[arg(long = "append-system-prompt")]
+    pub append_system_prompt: Option<String>,
+
     #[clap(skip)]
     pub config_overrides: CliConfigOverrides,
 }

@@ -58,6 +58,7 @@ pub(crate) async fn handle_create_conversation(
         config_profile: profile,
         codex_linux_sandbox_exe: None,
         base_instructions,
+        append_system_prompt: None,
         include_plan_tool: None,
         disable_response_storage: None,
         show_raw_agent_reasoning: None,

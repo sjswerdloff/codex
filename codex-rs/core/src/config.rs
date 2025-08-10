@@ -81,6 +81,9 @@ pub struct Config {
     /// Base instructions override.
     pub base_instructions: Option<String>,
 
+    /// Optional text appended to system instructions for this session.
+    pub append_system_prompt: Option<String>,
+
     /// Optional external notifier command. When set, Codex will spawn this
     /// program after each completed *turn* (i.e. when the agent finishes
     /// processing a user submission). The value must be the full command
@@ -404,6 +407,11 @@ pub struct ConfigToml {
     pub internal_originator: Option<String>,
 
     pub projects: Option<HashMap<String, ProjectConfig>>,
+
+    /// Optional path to a file whose contents will be appended to the system
+    /// instructions after the base instructions and any model-specific
+    /// sections.
+    pub append_system_prompt_file: Option<PathBuf>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -479,6 +487,7 @@ pub struct ConfigOverrides {
     pub config_profile: Option<String>,
     pub codex_linux_sandbox_exe: Option<PathBuf>,
     pub base_instructions: Option<String>,
+    pub append_system_prompt: Option<String>,
     pub include_plan_tool: Option<bool>,
     pub disable_response_storage: Option<bool>,
     pub show_raw_agent_reasoning: Option<bool>,
@@ -504,6 +513,7 @@ impl Config {
             config_profile: config_profile_key,
             codex_linux_sandbox_exe,
             base_instructions,
+            append_system_prompt,
             include_plan_tool,
             disable_response_storage,
             show_raw_agent_reasoning,
@@ -607,6 +617,17 @@ impl Config {
             Self::get_base_instructions(experimental_instructions_path, &resolved_cwd)?;
         let base_instructions = base_instructions.or(file_base_instructions);
 
+        // Load append-system-prompt text from a file, if specified, with the
+        // same precedence as experimental_instructions_file (profile overrides
+        // root). CLI overrides via ConfigOverrides.append_system_prompt take
+        // highest precedence.
+        let append_system_prompt_path = config_profile
+            .append_system_prompt_file
+            .as_ref()
+            .or(cfg.append_system_prompt_file.as_ref());
+        let file_append_system_prompt =
+            Self::get_base_instructions(append_system_prompt_path, &resolved_cwd)?;
+
         let config = Self {
             model,
             model_family,
@@ -629,6 +650,7 @@ impl Config {
             notify: cfg.notify,
             user_instructions,
             base_instructions,
+            append_system_prompt: append_system_prompt.or(file_append_system_prompt),
             mcp_servers: cfg.mcp_servers,
             model_providers,
             project_doc_max_bytes: cfg.project_doc_max_bytes.unwrap_or(PROJECT_DOC_MAX_BYTES),
@@ -1005,6 +1027,7 @@ disable_response_storage = true
                 shell_environment_policy: ShellEnvironmentPolicy::default(),
                 disable_response_storage: false,
                 user_instructions: None,
+                append_system_prompt: None,
                 notify: None,
                 cwd: fixture.cwd(),
                 mcp_servers: HashMap::new(),
@@ -1056,6 +1079,7 @@ disable_response_storage = true
             shell_environment_policy: ShellEnvironmentPolicy::default(),
             disable_response_storage: false,
             user_instructions: None,
+            append_system_prompt: None,
             notify: None,
             cwd: fixture.cwd(),
             mcp_servers: HashMap::new(),
@@ -1122,6 +1146,7 @@ disable_response_storage = true
             shell_environment_policy: ShellEnvironmentPolicy::default(),
             disable_response_storage: true,
             user_instructions: None,
+            append_system_prompt: None,
             notify: None,
             cwd: fixture.cwd(),
             mcp_servers: HashMap::new(),

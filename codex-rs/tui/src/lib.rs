@@ -105,6 +105,7 @@ pub async fn run_main(
         config_profile: cli.config_profile.clone(),
         codex_linux_sandbox_exe,
         base_instructions: None,
+        append_system_prompt: cli.append_system_prompt.clone(),
         include_plan_tool: Some(true),
         disable_response_storage: cli.oss.then_some(true),
         show_raw_agent_reasoning: cli.oss.then_some(true),

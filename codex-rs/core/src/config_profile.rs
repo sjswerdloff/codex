@@ -19,4 +19,8 @@ pub struct ConfigProfile {
     pub model_reasoning_summary: Option<ReasoningSummary>,
     pub chatgpt_base_url: Option<String>,
     pub experimental_instructions_file: Option<PathBuf>,
+    /// Optional path to a file whose contents will be appended to the system
+    /// instructions after the base instructions and any model-specific
+    /// sections.
+    pub append_system_prompt_file: Option<PathBuf>,
 }
