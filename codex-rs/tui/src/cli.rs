@@ -58,6 +58,10 @@ pub struct Cli {
     #[arg(long = "append-system-prompt")]
     pub append_system_prompt: Option<String>,
 
+    /// Append extra system instructions loaded from a file.
+    #[arg(long = "append-system-prompt-file", value_name = "FILE")]
+    pub append_system_prompt_file: Option<PathBuf>,
+
     #[clap(skip)]
     pub config_overrides: CliConfigOverrides,
 }

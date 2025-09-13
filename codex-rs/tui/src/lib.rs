@@ -96,6 +96,42 @@ pub async fn run_main(
     // canonicalize the cwd
     let cwd = cli.cwd.clone().map(|p| p.canonicalize().unwrap_or(p));
 
+    // Determine append-system-prompt text: CLI text overrides file.
+    let append_system_prompt_override = if let Some(s) = &cli.append_system_prompt {
+        Some(s.clone())
+    } else if let Some(p) = &cli.append_system_prompt_file {
+        // Resolve path relative to configured cwd if provided, else process cwd.
+        let resolved_path = if p.is_absolute() {
+            p.clone()
+        } else if let Some(c) = cli.cwd.clone() {
+            c.join(p)
+        } else {
+            std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(p)
+        };
+        match std::fs::read_to_string(&resolved_path) {
+            Ok(contents) => {
+                let trimmed = contents.trim().to_string();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed)
+                }
+            }
+            Err(e) => {
+                #[allow(clippy::print_stderr)]
+                eprintln!(
+                    "Failed to read --append-system-prompt-file ({}): {e}",
+                    resolved_path.display()
+                );
+                std::process::exit(1);
+            }
+        }
+    } else {
+        None
+    };
+
     let overrides = ConfigOverrides {
         model,
         approval_policy,
@@ -105,7 +141,7 @@ pub async fn run_main(
         config_profile: cli.config_profile.clone(),
         codex_linux_sandbox_exe,
         base_instructions: None,
-        append_system_prompt: cli.append_system_prompt.clone(),
+        append_system_prompt: append_system_prompt_override,
         include_plan_tool: Some(true),
         disable_response_storage: cli.oss.then_some(true),
         show_raw_agent_reasoning: cli.oss.then_some(true),

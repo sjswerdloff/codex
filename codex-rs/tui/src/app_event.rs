@@ -32,8 +32,9 @@ pub(crate) enum AppEvent {
     LatestLog(String),
 
     /// Dispatch a recognized slash command from the UI (composer) to the app
-    /// layer so it can be handled centrally.
-    DispatchCommand(SlashCommand),
+    /// layer so it can be handled centrally. Optional trailing text after the
+    /// command (same line) is included when present.
+    DispatchCommand(SlashCommand, Option<String>),
 
     /// Kick off an asynchronous file search for the given query (text after
     /// the `@`). Previous searches may be cancelled by the app layer so there

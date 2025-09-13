@@ -310,7 +310,7 @@ impl App<'_> {
                     AppState::Chat { widget } => widget.update_latest_log(line),
                     AppState::Onboarding { .. } => {}
                 },
-                AppEvent::DispatchCommand(command) => match command {
+                AppEvent::DispatchCommand(command, args) => match command {
                     SlashCommand::New => {
                         // User accepted – switch to chat view.
                         let new_widget = Box::new(ChatWidget::new(
@@ -333,7 +333,9 @@ impl App<'_> {
                     SlashCommand::Compact => {
                         if let AppState::Chat { widget } = &mut self.app_state {
                             widget.clear_token_usage();
-                            self.app_event_tx.send(AppEvent::CodexOp(Op::Compact));
+                            // If user provided trailing guidance, send it along with the compact request.
+                            self.app_event_tx
+                                .send(AppEvent::CodexOp(Op::Compact { guidance: args }));
                         }
                     }
                     SlashCommand::Quit => {

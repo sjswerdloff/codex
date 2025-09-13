@@ -48,6 +48,10 @@ pub struct Cli {
     #[arg(long = "append-system-prompt")]
     pub append_system_prompt: Option<String>,
 
+    /// Append extra system instructions loaded from a file.
+    #[arg(long = "append-system-prompt-file", value_name = "FILE")]
+    pub append_system_prompt_file: Option<PathBuf>,
+
     /// Allow running Codex outside a Git repository.
     #[arg(long = "skip-git-repo-check", default_value_t = false)]
     pub skip_git_repo_check: bool,

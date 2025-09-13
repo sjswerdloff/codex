@@ -125,7 +125,12 @@ pub enum Op {
     /// Request the agent to summarize the current conversation context.
     /// The agent will use its existing context (either conversation history or previous response id)
     /// to generate a summary which will be returned as an AgentMessage event.
-    Compact,
+    /// Optional `guidance` allows the user to provide inline instructions to
+    /// steer the summarization (e.g., identity/relationship retention).
+    Compact {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        guidance: Option<String>,
+    },
     /// Request to shut down codex instance.
     Shutdown,
 }

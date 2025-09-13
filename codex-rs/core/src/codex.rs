@@ -1010,7 +1010,7 @@ async fn submission_loop(
                     }
                 });
             }
-            Op::Compact => {
+            Op::Compact { guidance } => {
                 let sess = match sess.as_ref() {
                     Some(sess) => sess,
                     None => {
@@ -1024,7 +1024,9 @@ async fn submission_loop(
 
                 // Attempt to inject input into current task
                 if let Err(items) = sess.inject_input(vec![InputItem::Text {
-                    text: "Start Summarization".to_string(),
+                    text: guidance
+                        .clone()
+                        .unwrap_or_else(|| "Start Summarization".to_string()),
                 }]) {
                     let task = AgentTask::compact(
                         sess.clone(),
