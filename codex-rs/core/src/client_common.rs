@@ -85,6 +85,9 @@ pub struct Prompt {
 
     /// Optional override for the built-in BASE_INSTRUCTIONS.
     pub base_instructions_override: Option<String>,
+
+    /// Optional text to append to the assembled system instructions.
+    pub append_system_prompt: Option<String>,
 }
 
 impl Prompt {
@@ -93,11 +96,26 @@ impl Prompt {
             .base_instructions_override
             .as_deref()
             .unwrap_or(BASE_INSTRUCTIONS);
-        let mut sections: Vec<&str> = vec![base];
+        let mut sections: Vec<Cow<'_, str>> = vec![Cow::Borrowed(base)];
         if model.needs_special_apply_patch_instructions {
-            sections.push(APPLY_PATCH_TOOL_INSTRUCTIONS);
+            sections.push(Cow::Borrowed(APPLY_PATCH_TOOL_INSTRUCTIONS));
         }
-        Cow::Owned(sections.join("\n"))
+
+        if let Some(s) = &self.append_system_prompt {
+            let trimmed = s.trim();
+            if !trimmed.is_empty() {
+                // Prepend a blank line for readability.
+                sections.push(Cow::Owned(format!("\n{trimmed}")));
+            }
+        }
+
+        Cow::Owned(
+            sections
+                .iter()
+                .map(|s| s.as_ref())
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
     }
 
     fn get_formatted_user_instructions(&self) -> Option<String> {
@@ -262,6 +280,19 @@ mod tests {
         let expected = format!("{BASE_INSTRUCTIONS}\n{APPLY_PATCH_TOOL_INSTRUCTIONS}");
         let model_family = find_family_for_model("gpt-4.1").expect("known model slug");
         let full = prompt.get_full_instructions(&model_family);
+        assert_eq!(full, expected);
+    }
+
+    #[test]
+    fn get_full_instructions_with_append() {
+        let prompt = Prompt {
+            append_system_prompt: Some("extra rules".to_string()),
+            ..Default::default()
+        };
+        let model_family = find_family_for_model("gpt-4.1").expect("known model slug");
+        let full = prompt.get_full_instructions(&model_family);
+        let expected =
+            format!("{BASE_INSTRUCTIONS}\n{APPLY_PATCH_TOOL_INSTRUCTIONS}\n\nextra rules");
         assert_eq!(full, expected);
     }
 }

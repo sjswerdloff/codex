@@ -254,16 +254,10 @@ struct LogFileInfo {
 }
 
 fn create_log_file(config: &Config, session_id: Uuid) -> std::io::Result<LogFileInfo> {
-    // Resolve ~/.codex/sessions/YYYY/MM/DD and create it if missing.
+    // Compute a timestamp for this session start; used in filenames for both
+    // the default (legacy) layout and when CODEX_RESUME_HOME is set.
     let timestamp = OffsetDateTime::now_local()
         .map_err(|e| IoError::other(format!("failed to get local time: {e}")))?;
-    let mut dir = config.codex_home.clone();
-    dir.push(SESSIONS_SUBDIR);
-    dir.push(timestamp.year().to_string());
-    dir.push(format!("{:02}", u8::from(timestamp.month())));
-    dir.push(format!("{:02}", timestamp.day()));
-    fs::create_dir_all(&dir)?;
-
     // Custom format for YYYY-MM-DDThh-mm-ss. Use `-` instead of `:` for
     // compatibility with filesystems that do not allow colons in filenames.
     let format: &[FormatItem] =
@@ -272,8 +266,68 @@ fn create_log_file(config: &Config, session_id: Uuid) -> std::io::Result<LogFile
         .format(format)
         .map_err(|e| IoError::other(format!("failed to format timestamp: {e}")))?;
 
-    let filename = format!("rollout-{date_str}-{session_id}.jsonl");
+    // Minimal-touch extension: if CODEX_RESUME_HOME is set and non-empty, store
+    // rollouts under:
+    //   $CODEX_RESUME_HOME/sessions/<project-slug>/rollout-<uuid>.jsonl
+    // where <project-slug> is derived from the absolute cwd by replacing path
+    // separators and ':' with '-', collapsing runs, and trimming leading/trailing '-'.
+    if let Ok(val) = std::env::var("CODEX_RESUME_HOME") {
+        if !val.trim().is_empty() {
+            let mut dir = std::path::PathBuf::from(val);
+            dir.push(SESSIONS_SUBDIR);
 
+            let slug = {
+                let s = config.cwd.to_string_lossy();
+                let replaced = s.replace(['\\', '/', ':'], "-");
+                // Collapse multiple '-' and trim at ends.
+                let mut collapsed = String::with_capacity(replaced.len());
+                let mut prev_dash = false;
+                for ch in replaced.chars() {
+                    if ch == '-' {
+                        if !prev_dash {
+                            collapsed.push('-');
+                            prev_dash = true;
+                        }
+                    } else {
+                        collapsed.push(ch);
+                        prev_dash = false;
+                    }
+                }
+                let trimmed = collapsed.trim_matches('-').to_string();
+                if trimmed.is_empty() {
+                    "root".to_string()
+                } else {
+                    trimmed
+                }
+            };
+
+            dir.push(slug);
+            fs::create_dir_all(&dir)?;
+
+            let filename = format!("rollout-{date_str}-{session_id}.jsonl");
+            let path = dir.join(filename);
+            let file = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&path)?;
+
+            return Ok(LogFileInfo {
+                file,
+                session_id,
+                timestamp,
+            });
+        }
+    }
+
+    // Default (legacy) layout: ~/.codex/sessions/YYYY/MM/DD/rollout-<ts>-<uuid>.jsonl
+    let mut dir = config.codex_home.clone();
+    dir.push(SESSIONS_SUBDIR);
+    dir.push(timestamp.year().to_string());
+    dir.push(format!("{:02}", u8::from(timestamp.month())));
+    dir.push(format!("{:02}", timestamp.day()));
+    fs::create_dir_all(&dir)?;
+
+    let filename = format!("rollout-{date_str}-{session_id}.jsonl");
     let path = dir.join(filename);
     let file = std::fs::OpenOptions::new()
         .append(true)

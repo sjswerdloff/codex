@@ -110,6 +110,23 @@ impl CommandPopup {
             .selected_idx
             .and_then(|idx| matches.get(idx).copied())
     }
+
+    /// Parse and return any trailing arguments after the recognized command token
+    /// from the provided composer `first_line`.
+    pub(crate) fn trailing_args_from(&self, first_line: &str) -> Option<String> {
+        let Some(rest) = first_line.strip_prefix('/') else {
+            return None;
+        };
+        let rest = rest.trim_start();
+        let mut parts = rest.splitn(2, char::is_whitespace);
+        let _cmd = parts.next().unwrap_or("");
+        let trailing = parts.next().unwrap_or("").trim();
+        if trailing.is_empty() {
+            None
+        } else {
+            Some(trailing.to_string())
+        }
+    }
 }
 
 impl WidgetRef for CommandPopup {

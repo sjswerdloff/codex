@@ -38,6 +38,8 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
         images,
         model: model_cli_arg,
         oss,
+        append_system_prompt: append_system_prompt_text,
+        append_system_prompt_file,
         config_profile,
         full_auto,
         dangerously_bypass_approvals_and_sandbox,
@@ -134,6 +136,40 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
         None // No specific model provider override.
     };
 
+    // Determine append-system-prompt text: CLI text overrides file.
+    let append_system_prompt = if let Some(s) = append_system_prompt_text {
+        Some(s)
+    } else if let Some(p) = append_system_prompt_file {
+        let resolved_path = if p.is_absolute() {
+            p
+        } else if let Some(c) = cwd.clone() {
+            c.join(&p)
+        } else {
+            std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(&p)
+        };
+        match std::fs::read_to_string(&resolved_path) {
+            Ok(contents) => {
+                let trimmed = contents.trim().to_string();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed)
+                }
+            }
+            Err(e) => {
+                eprintln!(
+                    "Failed to read --append-system-prompt-file ({}): {e}",
+                    resolved_path.display()
+                );
+                std::process::exit(1);
+            }
+        }
+    } else {
+        None
+    };
+
     // Load configuration and determine approval policy
     let overrides = ConfigOverrides {
         model,
@@ -146,6 +182,7 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
         model_provider,
         codex_linux_sandbox_exe,
         base_instructions: None,
+        append_system_prompt,
         include_plan_tool: None,
         disable_response_storage: oss.then_some(true),
         show_raw_agent_reasoning: oss.then_some(true),

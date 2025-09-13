@@ -259,8 +259,12 @@ impl ChatComposer {
                 ..
             } => {
                 if let Some(cmd) = popup.selected_command() {
-                    // Send command to the app layer.
-                    self.app_event_tx.send(AppEvent::DispatchCommand(*cmd));
+                    // Capture trailing args (if any) from the first line.
+                    let first_line = self.textarea.text().lines().next().unwrap_or("");
+                    let args = popup.trailing_args_from(first_line);
+                    // Send command + optional args to the app layer.
+                    self.app_event_tx
+                        .send(AppEvent::DispatchCommand(*cmd, args));
 
                     // Clear textarea so no residual text remains.
                     self.textarea.set_text("");
@@ -1068,7 +1072,7 @@ mod tests {
 
         // Verify a DispatchCommand event for the "init" command was sent.
         match rx.try_recv() {
-            Ok(AppEvent::DispatchCommand(cmd)) => {
+            Ok(AppEvent::DispatchCommand(cmd, _args)) => {
                 assert_eq!(cmd.command(), "init");
             }
             Ok(_other) => panic!("unexpected app event"),
@@ -1241,7 +1245,7 @@ mod tests {
                 composer.handle_paste(paste.clone());
                 composer
                     .textarea
-                    .set_cursor((placeholder.len() - pos_from_end) as usize);
+                    .set_cursor(placeholder.len() - pos_from_end);
                 composer.handle_key_event(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
                 let result = (
                     composer.textarea.text().contains(&placeholder),

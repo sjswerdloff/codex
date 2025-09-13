@@ -243,6 +243,61 @@ To disable reasoning summaries, set `model_reasoning_summary` to `"none"` in you
 model_reasoning_summary = "none"  # disable reasoning summaries
 ```
 
+## System instructions: base, replace, and append
+
+Codex assembles the system instructions sent to the model from:
+
+- The built‑in base (`core/prompt.md`).
+- Model‑specific sections (e.g., extra `apply_patch` guidance).
+- Optional append text (see below).
+
+You can replace the base via a file, or append extra text via a file or CLI:
+
+### Replace the base instructions from a file
+
+```toml
+# Global (root-level)
+experimental_instructions_file = "/abs/path/to/system.md"
+
+# Or inside a profile:
+[profiles.mem]
+experimental_instructions_file = "system.md"  # resolved relative to the configured cwd
+```
+
+### Append extra system instructions from a file
+
+```toml
+# Global (root-level)
+append_system_prompt_file = "/abs/path/to/append.md"
+
+# Or inside a profile:
+[profiles.mem]
+append_system_prompt_file = "append.md"  # resolved relative to the configured cwd
+```
+
+### Append extra system instructions per-run (CLI)
+
+```bash
+codex tui --append-system-prompt "Prefer terse bullet-point answers."
+codex exec --append-system-prompt "Never write files unless asked." -- "Your prompt"
+
+# Or load appended instructions from a file (resolved relative to --cd if set)
+codex tui --append-system-prompt-file ./append.md
+codex exec --append-system-prompt-file /abs/path/to/append.md -- "Your prompt"
+```
+
+### Precedence
+
+1. CLI flag `--append-system-prompt` (highest)
+2. CLI flag `--append-system-prompt-file`
+3. `append_system_prompt_file` (profile overrides root)
+4. Base: built‑in `prompt.md` or `experimental_instructions_file` when set
+
+Notes:
+- Appended text is added after the base and model‑specific sections.
+- Empty/whitespace files are ignored.
+- Use the append options to add targeted rules without replacing the base.
+
 ## model_supports_reasoning_summaries
 
 By default, `reasoning` is only set on requests to OpenAI models that are known to support them. To force `reasoning` to set on requests to the current model, you can force this behavior by setting the following in `config.toml`:
@@ -466,6 +521,10 @@ To disable this behavior, configure `[history]` as follows:
 [history]
 persistence = "none"  # "save-all" is the default value
 ```
+
+## rollouts (experimental)
+
+To change where new rollout files are written, set the `CODEX_RESUME_HOME` environment variable. When set, rollouts are written to `$CODEX_RESUME_HOME/sessions/<project-slug>/rollout-<timestamp>-<uuid>.jsonl`. Otherwise, the default is `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-<timestamp>-<uuid>.jsonl`. See `docs/rollout_resume.md` for details.
 
 ## file_opener
 

@@ -22,7 +22,8 @@ file-search *args:
 
 # format code
 fmt:
-    cargo fmt -- --config imports_granularity=Item
+    # Use stable rustfmt without nightly-only options to avoid warnings.
+    cargo fmt --all
 
 fix:
     cargo clippy --fix --all-features --tests --allow-dirty
